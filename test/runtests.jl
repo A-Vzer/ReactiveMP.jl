@@ -1,16 +1,16 @@
-module ReactiveMPTest
+# module ReactiveMPTest
 
-using Test, Documenter, ReactiveMP
-using TestSetExtensions
+using Distributed
+
+addprocs(8)
+
+@everywhere begin 
+    using Test, Documenter, ReactiveMP
+    using TestSetExtensions
+end
 
 using Aqua
 Aqua.test_all(ReactiveMP; ambiguities=false)
-
-include("test_helpers.jl")
-
-using .ReactiveMPTestingHelpers
-
-# doctest(ReactiveMP)
 
 @testset ExtendedTestSet "ReactiveMP" begin
 
@@ -31,10 +31,12 @@ using .ReactiveMPTestingHelpers
         end
     end
 
+    testset = []
+
     function addtests(filename)
         key = filename_to_key(filename)
         if isempty(enabled_tests) || key in enabled_tests
-            include(filename)
+            push!(testset, filename)
         end
     end
 
@@ -95,6 +97,9 @@ using .ReactiveMPTestingHelpers
     addtests("rules/wishart/test_marginals.jl")
     addtests("rules/wishart/test_out.jl")
 
+    tests_passed = pmap(r -> begin include(r); return true end, testset)
+
+    @test all(tests_passed)
 end
 
-end
+#end
